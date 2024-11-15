@@ -2,6 +2,24 @@
 #include "TFT_eSPI.h" /* Please use the TFT library provided in the library. */
 #include "img_logo.h"
 #include "pin_config.h"
+#include <Arduino.h>
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <BLEServer.h>
+
+
+// Define your custom service and characteristic UUIDs
+#define SERVICE_UUID        "12345678-1234-1234-1234-123456789abc"
+#define CHARACTERISTIC_UUID "abcd1234-abcd-abcd-abcd-abcd1234abcd"
+
+// Create a BLE server
+BLEServer* pServer = nullptr;
+BLEService* pService = nullptr;
+BLECharacteristic* pCharacteristic = nullptr;
+
+String currentValue = "Hello BLE";
+
+
 
 
 /* The product now has two screens, and the initialization code needs a small change in the new version. The LCD_MODULE_CMD_1 is used to define the
@@ -36,13 +54,49 @@ lcd_cmd_t lcd_st7789v[] = {
     {0xE1, {0XF0, 0X08, 0X0C, 0X0B, 0X09, 0X24, 0X2B, 0X22, 0X43, 0X38, 0X15, 0X16, 0X2F, 0X37}, 14},
 };
 #endif
+// Custom BLECharacteristicCallback to handle read and write events
+class MyCharacteristicCallbacks : public BLECharacteristicCallbacks {
+  void onRead(BLECharacteristic *pCharacteristic) override {
+    Serial.println("Characteristic Read!");
+    Serial.print("Current value: ");
+    Serial.println(currentValue);
+  }
 
-void setup()
-{
+  void onWrite(BLECharacteristic *pCharacteristic) override {
+    Serial.println("Characteristic Written!");
+    // Get the written value
+    String writtenValue = pCharacteristic->getValue().c_str();
+    Serial.print("Written value: ");
+    Serial.println(writtenValue);
+    // First we test them with a background colour set
+    tft.setTextSize(1);
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextColor(TFT_GREEN, TFT_BLACK);
+    tft.drawString(writtenValue, 0, 0, 2);
+
+    // Optionally, you can store this value
+    currentValue = writtenValue;
+  }
+};
+
+// Custom BLEServerCallbacks to handle connection and disconnection events
+class MyServerCallbacks : public BLEServerCallbacks {
+  void onConnect(BLEServer* pServer) override {
+    Serial.println("Client connected!");
+  }
+
+  void onDisconnect(BLEServer* pServer) override {
+    Serial.println("Client disconnected!");
+  }
+};
+
+
+void setup(){
+    Serial.begin(9600);
+
     pinMode(PIN_POWER_ON, OUTPUT);
     digitalWrite(PIN_POWER_ON, HIGH);
 
-    Serial.begin(115200);
     Serial.println("Hello T-Display-S3");
 
     tft.begin();
@@ -74,19 +128,52 @@ void setup()
     ledcAttach(PIN_LCD_BL, 200, 8);
     ledcWrite(PIN_LCD_BL, 255);
 #endif
+
+  Serial.println("Serial initialized");
+  // Initialize BLE
+  BLEDevice::init("ESP32 BLE Server");
+
+  // Create the BLE server
+  pServer = BLEDevice::createServer();
+  
+  // Create the service and characteristic using your custom UUIDs
+  pService = pServer->createService(SERVICE_UUID);
+  pServer->setCallbacks(new MyServerCallbacks());  // Set the callback for connection events
+
+  pCharacteristic = pService->createCharacteristic(CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
+  Serial.println(SERVICE_UUID);
+  // Set the initial value of the characteristic
+  pCharacteristic->setValue(currentValue.c_str());
+
+  // Set the characteristic callbacks to handle read/write events
+  pCharacteristic->setCallbacks(new MyCharacteristicCallbacks());
+
+  // Start the service
+  pService->start();
+  
+  // Start advertising
+  BLEAdvertising* pAdvertising = pServer->getAdvertising();
+  pAdvertising->setScanResponse(true);
+  pAdvertising->setMinPreferred(0x06);  // Set min advertising interval to 100ms
+  pAdvertising->setMaxPreferred(0x12);  // Set max advertising interval to 200ms
+  pAdvertising->start();
+    if (!pServer) {
+  Serial.println("Failed to create BLE server");
+}
+if (!pService) {
+  Serial.println("Failed to create service");
+}
+if (!pCharacteristic) {
+  Serial.println("Failed to create characteristic");
+}
+
 }
 
 void loop()
 {
     targetTime = millis();
 
-    // First we test them with a background colour set
-    tft.setTextSize(1);
-    tft.fillScreen(TFT_BLACK);
-    tft.setTextColor(TFT_GREEN, TFT_BLACK);
 
-    tft.drawString(String(targetTime), 0, 0, 2);
-    
     delay(WAIT);
 
     
