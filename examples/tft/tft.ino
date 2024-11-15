@@ -69,9 +69,8 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks {
     Serial.print("Written value: ");
     Serial.println(writtenValue);
     // First we test them with a background colour set
-    tft.setTextSize(1);
     tft.fillScreen(TFT_BLACK);
-    tft.setTextColor(TFT_GREEN, TFT_BLACK);
+
     tft.drawString(writtenValue, 0, 0, 2);
 
     // Optionally, you can store this value
@@ -100,6 +99,8 @@ void setup(){
     Serial.println("Hello T-Display-S3");
 
     tft.begin();
+    tft.setTextSize(1);
+    tft.setTextColor(TFT_GREEN, TFT_BLACK);
 
 #if defined(LCD_MODULE_CMD_1)
     for (uint8_t i = 0; i < (sizeof(lcd_st7789v) / sizeof(lcd_cmd_t)); i++) {
@@ -153,6 +154,8 @@ void setup(){
   
   // Start advertising
   BLEAdvertising* pAdvertising = pServer->getAdvertising();
+  pAdvertising->addServiceUUID(SERVICE_UUID);
+
   pAdvertising->setScanResponse(true);
   pAdvertising->setMinPreferred(0x06);  // Set min advertising interval to 100ms
   pAdvertising->setMaxPreferred(0x12);  // Set max advertising interval to 200ms
@@ -171,7 +174,6 @@ if (!pCharacteristic) {
 
 void loop()
 {
-    targetTime = millis();
 
 
     delay(WAIT);
