@@ -6,6 +6,10 @@
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
+#include <string.h>
+#include <stdio.h>
+
+
 
 
 // Define your custom service and characteristic UUIDs
@@ -18,7 +22,9 @@ BLEService* pService = nullptr;
 BLECharacteristic* pCharacteristic = nullptr;
 
 String currentValue = "Hello BLE";
-
+int counter = 0;
+int last_cut = 0;
+String heap[5];
 
 
 
@@ -69,12 +75,50 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks {
     Serial.print("Written value: ");
     Serial.println(writtenValue);
     // First we test them with a background colour set
+
+  String to_print = writtenValue;
+   if(to_print.length() < currentValue.length()){
+    last_cut = 0;
+    counter = 0;
     tft.fillScreen(TFT_BLACK);
+  }
+  currentValue = writtenValue;
+  Serial.println(to_print);
+  Serial.println(to_print[last_cut]);
+  
 
-    tft.drawString(writtenValue, 0, 0, 2);
+   if((to_print.length() - last_cut) / 20 > 0){
+      int index = last_cut + 20;
 
-    // Optionally, you can store this value
-    currentValue = writtenValue;
+
+
+        while(!isspace(to_print[index])){
+          index --;
+        }
+        index ++;
+
+      if(counter < 4){
+        counter ++;
+      }
+      // use a queue for this to make it faster
+      else{
+        for (int i = 0; i < 4; i++) {
+          heap[i] = heap[i+1];
+       }
+       tft.fillScreen(TFT_BLACK);
+       for (int i=0; i < 4; i++){
+      tft.drawString(heap[i], 20, i * 33, 2);
+    }   
+      }
+      last_cut = index;
+   }
+   heap[counter] = (to_print.substring(last_cut, to_print.length()));
+   tft.drawString(heap[counter], 20, counter * 33, 2);
+
+  
+
+
+
   }
 };
 
@@ -93,13 +137,14 @@ class MyServerCallbacks : public BLEServerCallbacks {
 void setup(){
     Serial.begin(9600);
 
+
     pinMode(PIN_POWER_ON, OUTPUT);
     digitalWrite(PIN_POWER_ON, HIGH);
 
     Serial.println("Hello T-Display-S3");
 
     tft.begin();
-    tft.setTextSize(1);
+    tft.setTextSize(2);
     tft.setTextColor(TFT_GREEN, TFT_BLACK);
 
 #if defined(LCD_MODULE_CMD_1)
@@ -115,11 +160,12 @@ void setup(){
     }
 #endif
 
-
-    tft.setRotation(3);
+ 
+   tft.setRotation(3);
     tft.setSwapBytes(true);
-    tft.pushImage(0, 0, 320, 170, (uint16_t *)img_logo);
+   /* tft.pushImage(0, 0, 320, 170, (uint16_t *)img_logo);
     delay(2000);
+  */
 
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5,0,0)
     ledcSetup(0, 2000, 8);
@@ -169,6 +215,7 @@ if (!pService) {
 if (!pCharacteristic) {
   Serial.println("Failed to create characteristic");
 }
+    tft.fillScreen(TFT_BLACK);
 
 }
 
@@ -176,9 +223,8 @@ void loop()
 {
 
 
-    delay(WAIT);
 
-    
+
 }
 
 

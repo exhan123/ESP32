@@ -123,9 +123,9 @@ void loop()
 
         //tft.drawCentreString("Font size 2",81,12,2); // Draw text centre at position 80, 12 using font 2
 
-        tft.drawCentreString("Font size 4", 80, 30, 4); // Draw text centre at position 80, 24 using font 4
+        tft.drawCentreString("Font size 4", 80, 30, 2); // Draw text centre at position 80, 24 using font 4
 
-        tft.drawCentreString("12.34", 80, 54, 6); // Draw text centre at position 80, 24 using font 6
+        tft.drawCentreString("12.34", 80, 54, 2); // Draw text centre at position 80, 24 using font 6
 
         tft.drawCentreString("12.34 is in font size 6", 80, 92, 2); // Draw text centre at position 80, 90 using font 2
 
